@@ -6,12 +6,12 @@ from PIL import Image
 BASE_URL = "https://api.mangadex.org"
 
 
-def get_manga(title):
+def get_mangas(title):
     response = requests.get(
         BASE_URL + "/manga",
         params={"title": title}
     )
-    return response.json()
+    return response.json()["data"]
 
 
 def get_full_feed(manga_id):
@@ -29,7 +29,6 @@ def get_full_feed(manga_id):
     total = data["total"]
     df = pandas.json_normalize(data["data"])
     offset += limit
-    print(total)
 
     while total > offset:
         response = requests.get(
@@ -88,32 +87,30 @@ def get_chapters(manga_id):
             chapters_df = pandas.concat([chapters_df, pandas.DataFrame(row).transpose()])
 
     chapters_df = chapters_df.reset_index(drop=True)
-    print(chapters_df)
     return chapters_df
 
 
-def get_images(chapter_id):
+def get_images(chapter_id, title, chapter):
     response = requests.get(BASE_URL + f"/at-home/server/{chapter_id}")
     r = response.json()
-    print(r)
-    baseUrl = r["baseUrl"]
+    base_url = r["baseUrl"]
     chapter_hash = r["chapter"]["hash"]
     data = r["chapter"]["data"]  # high quality
-    data_saver = r["chapter"]["dataSaver"]  # low quality
 
-    os.makedirs(f"images/{chapter_id}", exist_ok=True)
+    os.makedirs(f"images/{title}/{chapter}", exist_ok=True)
 
     for page in data:
-        r = requests.get(f"{baseUrl}/data/{chapter_hash}/{page}")
-        with open(f"images/{chapter_id}/{page}", "wb") as f:
+        r = requests.get(f"{base_url}/data/{chapter_hash}/{page}")
+        with open(f"images/{title}/{chapter}/{page}", "wb") as f:
             f.write(r.content)
 
     print("Downloaded " + str(len(data)) + " pages.")
-    create_pdf(chapter_id)
+    create_pdf(title, chapter)
 
 
-def create_pdf(chapter_id, title, chapter):
-    path = f"images/{chapter_id}"
+def create_pdf(title, chapter):
+    os.makedirs(f"pdf/{title}", exist_ok=True)
+    path = f"images/{title}/{chapter}"
     images = []
     for file in os.listdir(path):
         if file.endswith(".jpg"):
