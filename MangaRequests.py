@@ -106,12 +106,16 @@ def get_images(chapter_id, title, chapter):
             f.write(r.content)
 
     print("Downloaded " + str(len(data)) + " pages.")
-    # create_pdf(title, chapter)
 
 
 def create_pdf(title, chapter):
     os.makedirs(f"pdf/{title}", exist_ok=True)
     path = f"images/{title}/{chapter}"
+
+    if not os.path.exists(path) or len(os.listdir(path)) == 0:
+        print("No images found")
+        return
+
     images = []
     for file in os.listdir(path):
         if file.endswith(".jpg"):
@@ -120,21 +124,13 @@ def create_pdf(title, chapter):
     images[0].save(f"pdf/{title}/{chapter}.pdf", save_all=True, append_images=images[1:])
 
 
-def create_full_pdf(title):
-    os.makedirs(f"pdf/{title}", exist_ok=True)
-    path = f"images/{title}/"
-    images = []
-    for chapter in os.listdir(path):
-        for file in os.listdir(path + chapter):
-            if file.endswith(".jpg") or file.endswith(".png"):
-                images.append(Image.open(os.path.join(path + chapter, file)))
+def pdf_combine(title):
+    os.makedirs(f"pdf/{title}/combined", exist_ok=True)
+    path = f"pdf/by_chapter/{title}"
+    if not os.path.exists(path) or len(os.listdir(path)) == 0:
+        print("No chapters found")
+        return
 
-    images[0].save(f"pdf/{title}.pdf", save_all=True, append_images=images[1:])
-
-
-def pdf_combine():
-    os.makedirs(f"pdf/combined", exist_ok=True)
-    path = f"pdf/"
     pdfs = []
     for file in os.listdir(path):
         if file.endswith(".pdf"):
@@ -146,5 +142,5 @@ def pdf_combine():
     for pdf in pdfs:
         merger.append(path + pdf)
 
-    merger.write(f"pdf/combined/combined.pdf")
+    merger.write(f"pdf/{title}/combined/{title}_combined.pdf")
     merger.close()
