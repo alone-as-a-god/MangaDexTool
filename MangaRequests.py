@@ -2,6 +2,7 @@ import requests
 import pandas
 import os
 from PIL import Image
+from pypdf import PdfMerger
 
 BASE_URL = "https://api.mangadex.org"
 
@@ -105,7 +106,7 @@ def get_images(chapter_id, title, chapter):
             f.write(r.content)
 
     print("Downloaded " + str(len(data)) + " pages.")
-    create_pdf(title, chapter)
+    # create_pdf(title, chapter)
 
 
 def create_pdf(title, chapter):
@@ -117,3 +118,33 @@ def create_pdf(title, chapter):
             images.append(Image.open(os.path.join(path, file)))
 
     images[0].save(f"pdf/{title}/{chapter}.pdf", save_all=True, append_images=images[1:])
+
+
+def create_full_pdf(title):
+    os.makedirs(f"pdf/{title}", exist_ok=True)
+    path = f"images/{title}/"
+    images = []
+    for chapter in os.listdir(path):
+        for file in os.listdir(path + chapter):
+            if file.endswith(".jpg") or file.endswith(".png"):
+                images.append(Image.open(os.path.join(path + chapter, file)))
+
+    images[0].save(f"pdf/{title}.pdf", save_all=True, append_images=images[1:])
+
+
+def pdf_combine():
+    os.makedirs(f"pdf/combined", exist_ok=True)
+    path = f"pdf/"
+    pdfs = []
+    for file in os.listdir(path):
+        if file.endswith(".pdf"):
+            pdfs.append(file)
+
+    pdfs.sort()
+    print(pdfs)
+    merger = PdfMerger()
+    for pdf in pdfs:
+        merger.append(path + pdf)
+
+    merger.write(f"pdf/combined/combined.pdf")
+    merger.close()
