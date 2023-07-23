@@ -14,13 +14,13 @@ def main_menu():
     chapters = MangaRequests.get_chapters(mangas[choice - 1]["id"])
 
     print("Downloading images... (This may take a while)")
-    # MangaRequests.get_all_images(chapters, mangas[choice - 1]['attributes']['title']['en'])
+    MangaRequests.get_all_images(chapters, mangas[choice - 1]['attributes']['title']['en'])
     # for index, row in chapters.iterrows():
     #   MangaRequests.get_images(row["id"], mangas[choice - 1]['attributes']['title']['en'], row["chapter"])
     # MangaRequests.create_pdf(mangas[choice - 1]['attributes']['title']['en'], row["chapter"])
 
     if manga:
-        MangaRequests.pdf_combine(manga['attributes']['title']['en'])
+        MangaRequests.pdf_combine(mangas[choice - 1]['attributes']['title']['en'])
     print("Done!")
 
 

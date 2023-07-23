@@ -130,7 +130,8 @@ def get_all_images(chapters, title):
 
 
 def create_pdf(title, chapter):
-    os.makedirs(f"pdf/{title}", exist_ok=True)
+    print(f"Creating pdf for {title} chapter {chapter}...")
+    os.makedirs(f"pdf/{title}/by_chapter", exist_ok=True)
     if chapter % 1 == 0:
         chapter = int(chapter)
     path = f"images/{title}/{chapter}"
@@ -147,7 +148,7 @@ def create_pdf(title, chapter):
             images.append(Image.open(os.path.join(path, file)))
 
     images.sort(key=lambda x: int(x.filename.split("/")[-1].split(".")[0]))
-
+    print(images)
     images[0].save(f"pdf/{title}/by_chapter/{chapter}.pdf", save_all=True, append_images=images[1:])
     # except:
     # print("Error creating pdf at " + path)
