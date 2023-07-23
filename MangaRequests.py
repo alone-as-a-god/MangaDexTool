@@ -1,10 +1,15 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import requests
 import pandas
 import os
+import threading
+from functools import partial
 from PIL import Image
 from pypdf import PdfMerger
 
 BASE_URL = "https://api.mangadex.org"
+MAX_THREADS = 20  # more than 20 threads will cause chapters to be skipped for some reason
 
 
 def get_mangas(title):
@@ -92,24 +97,42 @@ def get_chapters(manga_id):
 
 
 def get_images(chapter_id, title, chapter):
+    print(f"Downloading {title} chapter {chapter}...")
     response = requests.get(BASE_URL + f"/at-home/server/{chapter_id}")
     r = response.json()
     base_url = r["baseUrl"]
     chapter_hash = r["chapter"]["hash"]
     data = r["chapter"]["data"]  # high quality
 
+    if chapter % 1 == 0:
+        chapter = int(chapter)
+
     os.makedirs(f"images/{title}/{chapter}", exist_ok=True)
 
+    i = 0
     for page in data:
         r = requests.get(f"{base_url}/data/{chapter_hash}/{page}")
-        with open(f"images/{title}/{chapter}/{page}", "wb") as f:
+        file_name = str(i) + "." + page.split(".")[-1]
+        with open(f"images/{title}/{chapter}/{file_name}", "wb") as f:
             f.write(r.content)
+        i += 1
 
-    print("Downloaded " + str(len(data)) + " pages.")
+    print("Downloaded " + str(len(data)) + " pages")
+    create_pdf(title, chapter)
+
+
+def get_all_images(chapters, title):
+    executor = ThreadPoolExecutor(max_workers=MAX_THREADS)
+    partial_get_images = partial(get_images, title=title)
+
+    executor.map(get_images, chapters["id"], [title] * len(chapters), chapters["chapter"])
+    executor.shutdown(wait=True)
 
 
 def create_pdf(title, chapter):
     os.makedirs(f"pdf/{title}", exist_ok=True)
+    if chapter % 1 == 0:
+        chapter = int(chapter)
     path = f"images/{title}/{chapter}"
 
     if not os.path.exists(path) or len(os.listdir(path)) == 0:
@@ -117,16 +140,23 @@ def create_pdf(title, chapter):
         return
 
     images = []
+
+    # try:
     for file in os.listdir(path):
-        if file.endswith(".jpg"):
+        if file.endswith((".jpg", ".png", ".jpeg", ".gif")):
             images.append(Image.open(os.path.join(path, file)))
 
-    images[0].save(f"pdf/{title}/{chapter}.pdf", save_all=True, append_images=images[1:])
+    images.sort(key=lambda x: int(x.filename.split("/")[-1].split(".")[0]))
+
+    images[0].save(f"pdf/{title}/by_chapter/{chapter}.pdf", save_all=True, append_images=images[1:])
+    # except:
+    # print("Error creating pdf at " + path)
 
 
 def pdf_combine(title):
     os.makedirs(f"pdf/{title}/combined", exist_ok=True)
-    path = f"pdf/by_chapter/{title}"
+    path = f"pdf/{title}/by_chapter/"
+
     if not os.path.exists(path) or len(os.listdir(path)) == 0:
         print("No chapters found")
         return
@@ -142,5 +172,5 @@ def pdf_combine(title):
     for pdf in pdfs:
         merger.append(path + pdf)
 
-    merger.write(f"pdf/{title}/combined/{title}_combined.pdf")
+    merger.write(f"pdf/{title}/{title}_combined.pdf")
     merger.close()
