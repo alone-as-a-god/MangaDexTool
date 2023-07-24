@@ -1,7 +1,11 @@
 import MangaRequests
+from pyfiglet import Figlet
+
+f = Figlet(font='slant')
 
 
 def main_menu():
+    print(f.renderText('MangaDex Tool'))
     title_input = input("Please enter a title: ")
     mangas = MangaRequests.get_mangas(title_input)
     i = 1
